@@ -33,7 +33,7 @@ async def lifespan(_: FastAPI):
     await init_db()
     mode = "MOCK" if settings.llm_mock_mode else "LIVE"
     logger.info("PrepPilot API up. LLM=%s model=%s db=%s",
-                mode, settings.llm_model, settings.database_url.split("://")[0])
+                mode, settings.llm_model, settings.async_database_url.split("://")[0])
     yield
 
 

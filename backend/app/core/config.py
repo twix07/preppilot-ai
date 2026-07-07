@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///./preppilot.db"
 
+    @property
+    def async_database_url(self) -> str:
+        """Normalise Render's postgres:// or postgresql:// to asyncpg driver."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql+asyncpg://", 1)
+        if url.startswith("postgresql://") and "+asyncpg" not in url:
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
     # Auth
     jwt_secret: str = "change-me-in-production-please"
     jwt_expire_minutes: int = 1440

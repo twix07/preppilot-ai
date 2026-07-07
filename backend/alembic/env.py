@@ -14,7 +14,18 @@ from app.db.base import Base
 from app import models  # noqa: F401  (register all tables on the metadata)
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+
+# Render (and some other hosts) inject DATABASE_URL as postgresql:// or postgres://
+# which maps to psycopg2. Rewrite to asyncpg so alembic uses the same async driver
+# as the app itself.
+def _async_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+config.set_main_option("sqlalchemy.url", _async_url(settings.database_url))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -24,7 +35,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.database_url,
+        url=_async_url(settings.database_url),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
