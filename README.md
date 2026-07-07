@@ -1,203 +1,173 @@
 # PrepPilot AI — Career Intelligence Platform
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://preppilot-ai.vercel.app)
-[![Backend API](https://img.shields.io/badge/api-render-blue)](https://preppilot-backend.onrender.com/docs)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://preppilot-ai-blond.vercel.app)
+[![Backend API](https://img.shields.io/badge/api-render-blue)](https://preppilot-backend-x6xc.onrender.com/docs)
 [![CI](https://github.com/twix07/preppilot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/twix07/preppilot-ai/actions/workflows/ci.yml)
 
-> **[Live demo →](https://preppilot-ai.vercel.app)** · Sign in with `demo@preppilot.ai` (no password) to explore the product.
-
-Know if you're actually interview ready. Practice against your resume and the job description, get feedback that quotes your own answers, and watch a real readiness score improve over time.
-
-I built this because I ran mock interview sessions at our college's Training & Placement Cell and Consulting & Analytics Club (300+ members). Mentor prep doesn't scale, feedback is inconsistent, and students never really know if they're ready. PrepPilot is my attempt to fix that.
-
-Both Phase 1 (core loop) and Phase 2 (resume/job intelligence, analytics) are built and tested — 24 backend tests green, frontend builds clean, Alembic migrations round-trip. The full loop — resume + JD → adaptive interview → rubric evaluation → readiness update → dashboard — works end-to-end.
+**[Live demo →](https://preppilot-ai-blond.vercel.app)** · Sign in with `demo@preppilot.ai` to try it.
 
 ---
 
-## Table of contents
-- [What it does](#what-it-does)
-- [Readiness score formula](#readiness-score-formula)
-- [Architecture](#architecture)
-- [Quick start](#quick-start)
-- [Deploying (Render + Vercel)](#deploying-render--vercel)
-- [Running the tests](#running-the-tests)
-- [AI evaluation](#ai-evaluation)
-- [Cost](#cost)
-- [Privacy and data retention](#privacy-and-data-retention)
-- [Repo layout](#repo-layout)
-- [Measuring pilot success](#measuring-pilot-success)
-- [What's deferred to V2](#whats-deferred-to-v2)
+I used to run mock interview sessions at my college's Training & Placement Cell and a 300+ member Consulting & Analytics Club. The problem I kept running into: students would practice for weeks and still not know what to actually fix. Mentor mocks don't scale, feedback quality varies, and there's no way to track whether someone is improving.
+
+PrepPilot is what I built to fix that. It runs resume- and JD-aware mock interviews, scores answers against a rubric, and tracks a readiness score over time — so students have a number they can actually point to and a direction they can act on.
+
+**Tech stack:** Python / FastAPI · LangGraph · LiteLLM / Claude · PostgreSQL / SQLAlchemy / Alembic · Next.js / TypeScript / Tailwind / Recharts · Docker · Render + Vercel
 
 ---
 
 ## What it does
 
-The core problem: students practice for weeks and still don't know what to fix. Generic AI chat has no memory, no rubric, and no idea what's on your resume or what role you're targeting.
+1. Upload your resume and paste the job description
+2. Pick a track (Behavioral or PM) and start a mock interview
+3. The interviewer asks questions tailored to your resume and the JD, with one adaptive follow-up per question based on what you actually said
+4. After each question, get rubric-based feedback that quotes your own words
+5. Your readiness score updates, the trend line grows, and the dashboard shows you exactly what to work on next
 
-PrepPilot's loop:
-1. Add your resume and the job description
-2. Do a mock interview (Behavioral or PM track) — the questions are aware of your resume and the JD
-3. Get rubric-based feedback that quotes your own words
-4. See your readiness score update and your trend line grow
-
-**Jobs to be done:** *"When I have an interview in two weeks, I want to practice against my resume and the JD and get scored, so I know exactly what to fix first — and I can see I'm improving."*
-
-**North star:** number of students reaching "Interview Ready."
-
-**Activation:** resume uploaded (or first JD added) and first interview completed.
-
-Full planning docs live in [`docs/`](docs/) — PRD, competitive analysis, personas, user flows, architecture, DB schema, API contracts, wireframes, sprint plan.
+The full loop — resume + JD → adaptive interview → rubric evaluation → readiness update → dashboard — runs end-to-end with no API key needed (mock mode is free).
 
 ---
 
-## Readiness score formula
+## How the readiness score works
 
-The score is not a magic number — it's fully reconstructable from stored per-answer rubric scores.
+It's not a magic number. It's reconstructable from stored per-answer rubric scores at any point.
 
-1. **Normalize** each rubric score (1–5) → `norm = (raw - 1) / 4 * 100`
-2. **Competency score (recency-weighted).** Exponentially weighted moving average, newest answers first:
-   `C_k = Σ(α^age · norm) / Σ(α^age)`, default **α = 0.6** — recent practice counts more, older sessions fade but still matter
-3. **Readiness** = weighted average of competency scores, weights per track:
+Every answer is scored 1–5 on rubric dimensions that map to five competencies: Communication, Structure, Depth/Role-Knowledge, Problem-Solving, Behavioral/STAR.
 
-   | Competency | Behavioral | PM |
-   |---|--:|--:|
-   | Communication | 0.20 | 0.20 |
-   | Structure | 0.20 | 0.25 |
-   | Depth / Role-Knowledge | 0.15 | 0.20 |
-   | Problem-Solving | 0.15 | 0.25 |
-   | Behavioral / STAR | 0.30 | 0.10 |
+**Recency-weighted average** per competency — recent sessions count more, older ones fade:
+```
+C_k = Σ(α^age · norm) / Σ(α^age)    α = 0.6 by default
+```
 
-4. **Small-sample guard.** Below 5 sessions, show **"Building baseline (n/5)"** — no band, so nobody over-trusts a score built on one or two answers.
-5. **Bands.** `<50 Building · 50–70 Developing · 70–85 Nearly Ready · 85+ Interview Ready`
+**Readiness** = weighted average of competency scores, weights differ by track:
 
-*"Why is this student a 72?"* — Structure (78) and Communication (81) are strong, but Problem-Solving (61) and Depth (58) drag the PM-weighted average down. The last two sessions lifted Structure by 9 points, which is why 72 is up from 66. The score is fully auditable.
+| Competency | Behavioral | PM |
+|---|--:|--:|
+| Communication | 0.20 | 0.20 |
+| Structure | 0.20 | 0.25 |
+| Depth / Role-Knowledge | 0.15 | 0.20 |
+| Problem-Solving | 0.15 | 0.25 |
+| Behavioral / STAR | 0.30 | 0.10 |
 
-Implementation: [`scoring_service.py`](backend/app/services/scoring_service.py), tested in [`test_scoring.py`](backend/tests/unit/test_scoring.py).
+Below 5 sessions → shows "Building baseline (n/5)" instead of a band. Nobody should over-trust a score built on two answers.
+
+Bands: `< 50 Building · 50–70 Developing · 70–85 Nearly Ready · 85+ Interview Ready`
+
+Code: [`scoring_service.py`](backend/app/services/scoring_service.py) · Tests: [`test_scoring.py`](backend/tests/unit/test_scoring.py)
 
 ---
 
 ## Architecture
 
-Modular monolith. The frontend is presentation-only — all AI calls go through FastAPI.
+Modular monolith — one FastAPI backend, one Next.js frontend, one Postgres DB. The frontend is presentation only; all AI calls go through the backend.
 
 ```
 Next.js (React / TS / Tailwind / Recharts)
    ↓ HTTPS + JWT
-FastAPI  →  Auth (Google OAuth/JWT)  →  Services  →  LiteLLM  →  LangGraph (2 nodes)
-   ↓                                                                │
-PostgreSQL  ←──────────────────────────────────────  LangSmith tracing
+FastAPI → Auth → Services → LiteLLM → LangGraph (2 nodes)
+   ↓                                        │
+PostgreSQL ←──────────────── LangSmith tracing
 ```
 
-- **Two LangGraph nodes:** `interview_node` (asks questions + one adaptive follow-up per the student's actual answer) and `evaluation_node` (rubric scoring, structured JSON output). Routing is deterministic code, not an LLM planner.
-- **No RAG, no vector DB.** Resume and JD are injected as direct context.
-- **LiteLLM** wraps Claude for swappability, with retry + graceful fallback and token/cost/latency tracking.
-- **Mock mode:** with no `ANTHROPIC_API_KEY`, a deterministic mock LLM runs — the whole product is demoable and testable for free.
+Two LangGraph nodes, deterministic routing between them:
+- `interview_node` — asks the next question or a single adaptive follow-up based on the student's actual answer
+- `evaluation_node` — scores 1–5 per rubric dimension, structured JSON output, quotes the student's words in feedback
 
-Full architecture doc: [`docs/05-SYSTEM-ARCHITECTURE.md`](docs/05-SYSTEM-ARCHITECTURE.md).
+No RAG, no vector DB. Resume and JD go in as direct context. LiteLLM wraps Claude so the model is swappable without changing app code.
+
+Mock mode: no API key → deterministic mock LLM → full product works and is testable for free.
+
+Details: [`docs/05-SYSTEM-ARCHITECTURE.md`](docs/05-SYSTEM-ARCHITECTURE.md)
 
 ---
 
-## Quick start
+## Running locally
 
-### Option A — Docker (recommended, closest to production)
+### Docker (easiest)
 ```bash
-# from repo root
-cp backend/.env.example backend/.env   # optional — compose sets sane defaults
+cp backend/.env.example backend/.env
 docker compose up --build
 # Frontend: http://localhost:3000
 # API docs: http://localhost:8000/docs
 ```
-Runs in mock mode by default (free). To use live Claude:
-```bash
-ANTHROPIC_API_KEY=sk-ant-... docker compose up --build
-```
 
-### Option B — Local dev (SQLite, no Docker)
+### Without Docker (SQLite)
 
-**Backend**
+Backend:
 ```bash
 cd backend
-python3.12 -m venv .venv && source .venv/bin/activate
+python3.11 -m venv .venv && source .venv/bin/activate
 pip install .[dev]
 export DATABASE_URL="sqlite+aiosqlite:///./preppilot.db"
-python -m app.seed          # seeds demo sessions so the dashboard looks real
+python -m app.seed
 uvicorn app.main:app --reload --port 8000
 ```
 
-**Frontend** (new terminal)
+Frontend:
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:8000
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local
+npm run dev
 ```
 
-Sign in with `demo@preppilot.ai` to see the seeded dashboard and trend. In production, dev login is disabled and Google OAuth takes over.
-
-> Requires Python 3.11+ and Node 20+.
+Sign in with `demo@preppilot.ai` to see seeded sessions and a readiness trend.
 
 ---
 
-## Deploying (Render + Vercel)
+## Deploying
 
-Full step-by-step in [`DEPLOYMENT.md`](DEPLOYMENT.md). Short version:
+Full guide in [`DEPLOYMENT.md`](DEPLOYMENT.md). The short version:
 
-1. Push this repo to GitHub
-2. [Render](https://render.com) → New Blueprint → connect repo → Render reads `render.yaml`, provisions the backend + Postgres automatically
-3. [Vercel](https://vercel.com) → Import → root directory: `frontend` → add `NEXT_PUBLIC_API_URL=https://preppilot-backend.onrender.com` → deploy
-4. Set `FRONTEND_ORIGIN` on Render to your Vercel URL to wire CORS
+1. Push to GitHub
+2. Render → New Blueprint → connect repo (reads `render.yaml`, provisions backend + Postgres)
+3. Vercel → Import → root directory: `frontend` → add `NEXT_PUBLIC_API_URL` → deploy
+4. Set `FRONTEND_ORIGIN` on Render to your Vercel URL
 
-Both free tiers. No credit card needed.
+Both free tiers, no credit card needed.
 
 ---
 
-## Running the tests
+## Tests
 
 ```bash
-cd backend
-pip install .[dev]
-pytest -q
+cd backend && pip install .[dev] && pytest -q
 ```
-Tests run against SQLite in mock mode — no API key, no Postgres needed. CI runs the same on every push (`.github/workflows/ci.yml`), plus frontend typecheck/build and Docker image builds.
+
+Runs against SQLite in mock mode — no API key or Postgres needed. Same setup runs in CI on every push.
 
 ---
 
 ## AI evaluation
 
-The evaluator is the core of the product, so it's treated as a first-class deliverable:
-
 ```bash
-cd backend
-python -m tests.ai_eval.run_eval   # AI scores vs. human benchmark
+cd backend && python -m tests.ai_eval.run_eval
 ```
-- Benchmark: [`tests/ai_eval/benchmark.jsonl`](backend/tests/ai_eval/benchmark.jsonl) — human-scored answers across weak → strong
-- Reports MAE, exact and within-1 agreement per competency, and self-consistency across repeated runs
-- Methodology and calibration notes: [`docs/reports/AI-EVALUATION-REPORT.md`](docs/reports/AI-EVALUATION-REPORT.md)
+
+Compares AI rubric scores against a human-labeled benchmark. Reports MAE, exact and within-1 agreement per competency, and self-consistency across runs. The benchmark and methodology are in [`docs/reports/AI-EVALUATION-REPORT.md`](docs/reports/AI-EVALUATION-REPORT.md).
 
 ---
 
-## Cost
+## Cost at pilot scale (~30 students)
 
-Rough estimate at pilot scale (~30 students):
+| | Monthly est. |
+|---|--:|
+| Claude tokens (~240 interviews × $0.08) | ~$20 |
+| Render backend (free tier) | $0 |
+| Render Postgres (free tier) | $0–7 |
+| LangSmith (dev tier) | $0 |
+| **Total** | **~$20–27/mo** |
 
-| Line item | Assumption | Monthly est. |
-|---|---|--:|
-| Claude tokens | ~240 interviews × ~$0.08 | ~$20 |
-| Render backend | Free tier | $0 |
-| Render Postgres | Free tier | $0–7 |
-| LangSmith | Dev tier | $0 |
-| **Total** | | **~$20–27/mo** |
-
-Controls: per-user daily caps (Postgres counters), per-endpoint rate limiting, answer-length cap (1,800 chars), per-call spend tracking at `GET /metrics`. Set a global spend ceiling before any public launch.
+Per-user daily caps, per-endpoint rate limiting, 1,800-char answer cap, and per-call spend tracking keep this from running away.
 
 ---
 
-## Privacy and data retention
+## Privacy
 
-- Resume text is encrypted at rest (Fernet).
-- Resume and JD inputs are treated as untrusted data — the model is instructed to never follow instructions inside them (system/user/document channels are kept separate).
-- `DELETE /user/data` irreversibly purges everything.
-- Inactive resumes are auto-purged after 90 days (`RESUME_RETENTION_DAYS`).
+- Resume text encrypted at rest (Fernet)
+- Resume/JD inputs treated as untrusted data — model is instructed they are data, not commands
+- `DELETE /user/data` purges everything permanently
+- Inactive resumes auto-deleted after 90 days
 
 ---
 
@@ -205,52 +175,25 @@ Controls: per-user daily caps (Postgres counters), per-endpoint rate limiting, a
 
 ```
 preppilot-ai/
-├── docs/              # PRD + 9 other planning artifacts, plus reports/
-├── backend/           # FastAPI modular monolith (controllers/services/repos/models)
-│   └── app/ai/        # rubrics.py, 2-node LangGraph, prompts, LiteLLM wrapper
-├── frontend/          # Next.js app (dashboard, interview flow, history, settings)
-├── docker-compose.yml # db + backend + frontend
-├── render.yaml        # one-click Render deploy
-└── .github/workflows/ # CI
+├── backend/           # FastAPI monolith — services, repos, models, AI layer
+│   └── app/ai/        # LangGraph nodes, prompts, rubrics, LiteLLM wrapper
+├── frontend/          # Next.js — dashboard, interview flow, history, settings
+├── docs/              # PRD, architecture, DB schema, API contracts, wireframes, sprint plan
+├── docker-compose.yml
+├── render.yaml
+└── .github/workflows/
 ```
 
 ---
 
-## Measuring pilot success
+## What's in V2
 
-Pilot target: 20–30 students from the Consulting Club and Placement Cell, running the core loop before any extension is polished.
-
-- **Activation rate** — % who upload a resume/JD and finish one interview
-- **Readiness improvement** — median Δ readiness from session 1 → session 5
-- **Engagement** — interviews per user per week; % reaching ≥5 sessions
-- **Quality** — average interview score; thumbs-up rate on feedback cards
-- **North star** — students reaching "Nearly Ready" or "Interview Ready"
-- **Qualitative** — short weekly check-ins: did the feedback feel specific to you? did you know what to fix?
-
-Iteration loop: ship → watch activation and feedback thumbs → fix the biggest drop-off. Pilot report at [`docs/reports/PILOT-REPORT.md`](docs/reports/PILOT-REPORT.md) documents at least one change made from pilot feedback.
-
----
-
-## Shipped extensions (Phase 2)
-
-| Extension | What it does |
+| Feature | Why it's not in V1 |
 |---|---|
-| **Resume Intelligence (E1)** | PDF upload + parse, skill extraction, professional summary, JD match % (heuristic, clearly labeled "not an ATS score"), improvement suggestions |
-| **Job Intelligence (E2)** | Required-skill extraction, resume comparison, company prep tips generated only from the JD and your pasted notes — no external data fetched, labeled clearly |
-| **Analytics polish** | Feedback thumbs loop wired end-to-end → feedback-trust metric at `GET /metrics` |
-| **Migrations** | Full Alembic setup, round-trip verified, applied automatically on container start |
+| More interview tracks (technical, case, SQL) | Two tracks done well proves the loop is track-agnostic |
+| Cohort/admin analytics | Student value has to land first |
+| RAG, streaming, multi-model routing | No pilot-stage payoff |
 
 ---
 
-## What's deferred to V2
-
-| Deferred | Why |
-|---|---|
-| Technical / SQL / AI-ML / Case tracks | Two tracks done well proves the loop works. Adding a track is one entry in `rubrics.py`. |
-| Cohort/admin analytics | Student value has to land first. |
-| RAG / vector search, streaming, multi-model, fine-tuning | Complexity without pilot-stage payoff. |
-
----
-
-For PM roles: the problem → users → pilot → outcomes → tradeoffs story is the core. Architecture is in the appendix.
-For AI/engineering roles: the evaluation methodology and 2-node system design are the interesting parts.
+Docs in [`docs/`](docs/) cover the full product thinking — PRD, competitive analysis, personas, user flows, and sprint plan. For engineering conversations, the evaluation methodology and 2-node design are the interesting parts.
