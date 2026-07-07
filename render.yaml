@@ -19,7 +19,7 @@ services:
       - key: ALLOW_DEV_LOGIN
         value: "true"                # keep true so demo@preppilot.ai works without Google OAuth
       - key: FRONTEND_ORIGIN
-        sync: false                  # set manually after you get the Vercel URL (see DEPLOYMENT.md)
+        value: "https://preppilot-ai-blond.vercel.app"
       - key: ANTHROPIC_API_KEY
         sync: false                  # leave empty for free mock mode, or paste your key
       - key: LLM_MODEL
