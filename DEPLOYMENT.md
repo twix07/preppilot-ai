@@ -20,7 +20,7 @@ git init                          # skip if already a git repo
 git add .
 git commit -m "feat: deploy config"
 gh repo create preppilot-ai --public --source=. --push
-# or: git remote add origin https://github.com/tvishachawla/preppilot-ai.git && git push -u origin main
+# or: git remote add origin https://github.com/twix07/preppilot-ai.git && git push -u origin main
 ```
 
 ---

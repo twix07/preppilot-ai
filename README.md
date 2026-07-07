@@ -2,7 +2,7 @@
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://preppilot-ai.vercel.app)
 [![Backend API](https://img.shields.io/badge/api-render-blue)](https://preppilot-backend.onrender.com/docs)
-[![CI](https://github.com/tvishachawla/preppilot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/tvishachawla/preppilot-ai/actions/workflows/ci.yml)
+[![CI](https://github.com/twix07/preppilot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/twix07/preppilot-ai/actions/workflows/ci.yml)
 
 > **[Live demo →](https://preppilot-ai.vercel.app)** · Sign in with `demo@preppilot.ai` (no password) to explore the product.
 
