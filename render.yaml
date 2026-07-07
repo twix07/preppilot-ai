@@ -13,7 +13,7 @@ services:
           name: preppilot-db
           property: connectionString
       - key: ENVIRONMENT
-        value: production
+        value: development
       - key: JWT_SECRET
         generateValue: true          # Render auto-generates a secure random value
       - key: ALLOW_DEV_LOGIN
