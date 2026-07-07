@@ -7,6 +7,10 @@
 **[Live demo →](https://preppilot-ai-blond.vercel.app)** · Sign in with `demo@preppilot.ai` to try it.
 
 ---
+<img width="1280" height="738" alt="Screenshot 2026-07-08 at 1 32 11 AM" src="https://github.com/user-attachments/assets/7640cd90-3922-4f1f-a953-93ff7d1bf790" />
+
+<img width="1280" height="757" alt="Screenshot 2026-07-08 at 1 31 16 AM" src="https://github.com/user-attachments/assets/8bc58f7c-99a0-47bf-b97a-9edf8d4b901b" />
+
 
 I used to run mock interview sessions at my college's Training & Placement Cell and a 300+ member Consulting & Analytics Club. The problem I kept running into: students would practice for weeks and still not know what to actually fix. Mentor mocks don't scale, feedback quality varies, and there's no way to track whether someone is improving.
 
