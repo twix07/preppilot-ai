@@ -6,15 +6,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install dependencies first for better layer caching.
+# Copy everything first so setuptools can find the app/ package directory
 COPY pyproject.toml ./
-RUN pip install --upgrade pip && pip install .
-
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
 
+RUN pip install --upgrade pip && pip install .
+
 EXPOSE 8000
 
-# Single-host deployment (Azure App Service). Apply migrations, then serve the ASGI app.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
