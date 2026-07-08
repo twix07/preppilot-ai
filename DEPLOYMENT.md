@@ -39,9 +39,9 @@ gh repo create preppilot-ai --public --source=. --push
    ```
 6. Note your backend URL — it will look like:
    ```
-   https://preppilot-backend.onrender.com
+   https://preppilot-backend-x6xc.onrender.com
    ```
-7. Verify: `curl https://preppilot-backend.onrender.com/health`
+7. Verify: `curl https://preppilot-backend-x6xc.onrender.com/health`
    Expected: `{"status":"ok","llm_mode":"mock"}`
 
 ### Optional — enable live Claude (costs ~$0.08/interview)
@@ -61,11 +61,11 @@ The service redeploys automatically. Health check will then return `"llm_mode":"
 3. Framework: **Next.js** (auto-detected)
 4. Under **Environment Variables**, add:
    ```
-   NEXT_PUBLIC_API_URL = https://preppilot-backend.onrender.com
+   NEXT_PUBLIC_API_URL = https://preppilot-backend-x6xc.onrender.com
    ```
 5. Click **Deploy**. Vercel builds and gives you a URL like:
    ```
-   https://preppilot-ai.vercel.app
+   https://preppilot-ai-blond.vercel.app
    ```
 
 ---
@@ -74,11 +74,11 @@ The service redeploys automatically. Health check will then return `"llm_mode":"
 
 Back in Render dashboard → `preppilot-backend` → **Environment** → set:
 ```
-FRONTEND_ORIGIN = https://preppilot-ai.vercel.app
+FRONTEND_ORIGIN = https://preppilot-ai-blond.vercel.app
 ```
 If you have multiple domains (e.g. a custom domain too), use comma-separated values:
 ```
-FRONTEND_ORIGIN = https://preppilot-ai.vercel.app,https://preppilot.yourdomain.com
+FRONTEND_ORIGIN = https://preppilot-ai-blond.vercel.app,https://preppilot.yourdomain.com
 ```
 Save — Render redeploys in ~30 seconds.
 
@@ -86,7 +86,7 @@ Save — Render redeploys in ~30 seconds.
 
 ## Step 5 — Smoke test
 
-1. Open `https://preppilot-ai.vercel.app`
+1. Open `https://preppilot-ai-blond.vercel.app`
 2. Sign in with **dev login**: email `demo@preppilot.ai` (no password needed)
 3. You should see the seeded dashboard with a readiness trend
 4. Start a mock interview — it runs fully in mock mode, no API key needed
